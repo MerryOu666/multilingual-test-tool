@@ -45,25 +45,7 @@ def _trim_to_length(text, target_length):
     return "".join(chars).rstrip()
 
 
-def generate_by_length(lang_code, target_length, category="全部"):
-    """按目标字数（100/500/1000/2000）拼接模板句子生成一条长文本测试用例。"""
-    mod = ALL_LANGUAGES.get(lang_code)
-    if mod is None:
-        return []
-
-    templates = mod.TEMPLATES
-
-    if category != "全部" and category in templates:
-        pool = [(category, t) for t in templates[category]]
-    else:
-        pool = []
-        for c in ALL_CATEGORIES:
-            if c in templates and templates[c]:
-                pool.extend((c, t) for t in templates[c])
-
-    if not pool:
-        return []
-
+def _generate_one_by_length(mod, pool, lang_code, target_length):
     picked_texts = []
     picked_categories = []
     length_so_far = 0
@@ -86,15 +68,41 @@ def generate_by_length(lang_code, target_length, category="全部"):
     unique_cats = list(dict.fromkeys(picked_categories))
     cat_label = unique_cats[0] if len(unique_cats) == 1 else "混合"
 
-    return [{
-        "序号": 1,
+    return {
         "类别": cat_label,
         "语种": mod.LANG_NAME,
         "语种代码": mod.LANG_CODE,
         "目标字数": target_length,
         "实际字数": _text_length(final_text),
         "测试用例": final_text,
-    }]
+    }
+
+
+def generate_by_length(lang_code, target_length, category="全部", count=1):
+    """按目标字数（100/500/1000/2000）拼接模板句子生成 count 条长文本测试用例。"""
+    mod = ALL_LANGUAGES.get(lang_code)
+    if mod is None:
+        return []
+
+    templates = mod.TEMPLATES
+
+    if category != "全部" and category in templates:
+        pool = [(category, t) for t in templates[category]]
+    else:
+        pool = []
+        for c in ALL_CATEGORIES:
+            if c in templates and templates[c]:
+                pool.extend((c, t) for t in templates[c])
+
+    if not pool:
+        return []
+
+    results = []
+    for idx in range(1, count + 1):
+        item = _generate_one_by_length(mod, pool, lang_code, target_length)
+        item["序号"] = idx
+        results.append(item)
+    return results
 
 
 def generate(lang_code, count, category="全部"):

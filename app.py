@@ -32,7 +32,7 @@ gen_mode = st.radio(
     horizontal=True,
 )
 
-col1, col2, col3 = st.columns([2, 1, 1])
+col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
 
 with col1:
     selected_lang = st.selectbox(
@@ -41,20 +41,25 @@ with col1:
         format_func=lambda x: lang_display[x],
     )
 
-with col2:
-    if gen_mode == "按数量生成":
+if gen_mode == "按数量生成":
+    with col2:
         count = st.number_input("生成数量", min_value=1, max_value=500, value=20, step=5)
-    else:
+    with col3:
+        category_options = ["全部"] + ALL_CATEGORIES
+        selected_category = st.selectbox("用例类别", options=category_options)
+else:
+    with col2:
         target_length = st.selectbox(
             "目标字数",
             options=LENGTH_OPTIONS,
             index=1,
             format_func=lambda n: f"{n} 字",
         )
-
-with col3:
-    category_options = ["全部"] + ALL_CATEGORIES
-    selected_category = st.selectbox("用例类别", options=category_options)
+    with col3:
+        length_count = st.number_input("生成数量", min_value=1, max_value=100, value=1, step=1)
+    with col4:
+        category_options = ["全部"] + ALL_CATEGORIES
+        selected_category = st.selectbox("用例类别", options=category_options)
 
 generate_btn = st.button("🚀 生成用例", type="primary", use_container_width=True)
 
@@ -63,7 +68,7 @@ if generate_btn:
         if gen_mode == "按数量生成":
             results = generate(selected_lang, count, selected_category)
         else:
-            results = generate_by_length(selected_lang, target_length, selected_category)
+            results = generate_by_length(selected_lang, target_length, selected_category, length_count)
 
     if not results:
         st.warning("未找到该语种的模板数据，请检查配置。")
