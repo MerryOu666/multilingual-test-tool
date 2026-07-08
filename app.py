@@ -88,17 +88,26 @@ if generate_btn:
             results = generate(selected_lang, count, selected_category)
         else:
             history_key = f"length_history::{selected_lang}::{selected_category}::{target_length}"
-            previous_texts = st.session_state.get(history_key, set())
-            results = generate_by_length(
-                selected_lang,
-                target_length,
-                selected_category,
-                int(length_count),
-                exclude=previous_texts,
-            )
+            previous_texts = set(st.session_state.get(history_key, []))
+            try:
+                results = generate_by_length(
+                    selected_lang,
+                    target_length,
+                    selected_category,
+                    int(length_count),
+                    exclude=previous_texts,
+                )
+            except TypeError:
+                # 兼容 Streamlit Cloud 重新部署期间可能短暂加载到旧版 generator.py 的情况。
+                results = generate_by_length(
+                    selected_lang,
+                    target_length,
+                    selected_category,
+                    int(length_count),
+                )
             if results:
                 updated = previous_texts | {item["测试用例"] for item in results}
-                st.session_state[history_key] = updated
+                st.session_state[history_key] = list(updated)
 
     if not results:
         st.warning("未找到该语种的模板数据，请检查配置。")
