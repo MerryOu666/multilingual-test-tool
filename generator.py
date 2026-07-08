@@ -232,13 +232,13 @@ def _build_unique_text(pool, lang_code, target_length, seen_texts, variant_index
         fallback_index += 1
 
 
-def generate_by_length(lang_code, target_length, category="全部", count=1):
+def generate_by_length(lang_code, target_length, category="全部", count=1, exclude=None):
     mod = ALL_LANGUAGES.get(lang_code)
     if mod is None or lang_code not in LONG_COPY_LANGUAGES:
         return []
 
     results = []
-    seen_texts = set()
+    seen_texts = set(exclude) if exclude else set()
     for idx in range(1, int(count) + 1):
         selected_category = _select_length_category(lang_code, category)
         if selected_category is None:

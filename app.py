@@ -87,7 +87,18 @@ if generate_btn:
         if gen_mode == "按数量生成":
             results = generate(selected_lang, count, selected_category)
         else:
-            results = generate_by_length(selected_lang, target_length, selected_category, int(length_count))
+            history_key = f"length_history::{selected_lang}::{selected_category}::{target_length}"
+            previous_texts = st.session_state.get(history_key, set())
+            results = generate_by_length(
+                selected_lang,
+                target_length,
+                selected_category,
+                int(length_count),
+                exclude=previous_texts,
+            )
+            if results:
+                updated = previous_texts | {item["测试用例"] for item in results}
+                st.session_state[history_key] = updated
 
     if not results:
         st.warning("未找到该语种的模板数据，请检查配置。")
