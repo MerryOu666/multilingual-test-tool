@@ -1,8 +1,8 @@
 # 多语种测试用例生成工具
 
-按语种一键批量生成原生测试用例，支持导出 Excel / CSV。
+按语种一键批量生成原生测试用例，支持按数量或按目标字数（100/500/1000/2000）两种模式生成，支持导出 Excel / CSV。
 
-**在线使用：** https://multilingual-test-tool-5frciul7ldhmxcbjfalnqe.streamlit.app
+**在线使用：** https://multilingual-test-tool-9rsisz5uouyxnfs6m27jh6.streamlit.app
 
 ## 支持语种
 
@@ -24,7 +24,7 @@
 ## 使用方法
 
 1. 打开上方链接
-2. 选择语种 → 设置数量 → 点击生成
+2. 选择语种 → 选择生成模式（按数量 / 按字数）→ 设置数量或目标字数 → 点击生成
 3. 下载 Excel 或 CSV 文件
 
 ## 本地运行
