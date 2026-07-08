@@ -165,11 +165,13 @@ def _extend_copy(copy, pool, target_length):
 
     parts = [copy]
     candidates = [item for item in pool if item != copy]
-    while _text_length("\n\n".join(parts)) < target_length and candidates:
-        next_part = random.choice(candidates)
-        candidates.remove(next_part)
+    while _text_length(" ".join(parts)) < target_length:
+        if not candidates:
+            candidates = pool[:]
+            random.shuffle(candidates)
+        next_part = candidates.pop(0)
         parts.append(next_part)
-    return "\n\n".join(parts)
+    return " ".join(parts)
 
 
 def _select_length_category(lang_code, category):
