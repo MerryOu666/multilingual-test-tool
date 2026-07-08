@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from generator import generate, ALL_CATEGORIES
+from generator import generate, generate_by_length, ALL_CATEGORIES, LENGTH_OPTIONS
 from exporter import to_excel_bytes, to_csv_bytes, make_filename
 from templates import get_language_options
 
@@ -26,6 +26,12 @@ st.markdown(
 lang_options = get_language_options()
 lang_display = {code: f"{name} ({code})" for code, name in lang_options.items()}
 
+gen_mode = st.radio(
+    "生成模式",
+    options=["按数量生成", "按字数生成"],
+    horizontal=True,
+)
+
 col1, col2, col3 = st.columns([2, 1, 1])
 
 with col1:
@@ -36,7 +42,15 @@ with col1:
     )
 
 with col2:
-    count = st.number_input("生成数量", min_value=1, max_value=500, value=20, step=5)
+    if gen_mode == "按数量生成":
+        count = st.number_input("生成数量", min_value=1, max_value=500, value=20, step=5)
+    else:
+        target_length = st.selectbox(
+            "目标字数",
+            options=LENGTH_OPTIONS,
+            index=1,
+            format_func=lambda n: f"{n} 字",
+        )
 
 with col3:
     category_options = ["全部"] + ALL_CATEGORIES
@@ -46,7 +60,10 @@ generate_btn = st.button("🚀 生成用例", type="primary", use_container_widt
 
 if generate_btn:
     with st.spinner("正在生成测试用例..."):
-        results = generate(selected_lang, count, selected_category)
+        if gen_mode == "按数量生成":
+            results = generate(selected_lang, count, selected_category)
+        else:
+            results = generate_by_length(selected_lang, target_length, selected_category)
 
     if not results:
         st.warning("未找到该语种的模板数据，请检查配置。")
@@ -61,8 +78,9 @@ if "results" in st.session_state and st.session_state["results"]:
     st.success(f"✅ 已生成 **{len(results)}** 条 **{lang_name}** 测试用例")
 
     df = pd.DataFrame(results)
+    display_cols = [c for c in ["序号", "类别", "目标字数", "实际字数", "测试用例"] if c in df.columns]
     st.dataframe(
-        df[["序号", "类别", "测试用例"]],
+        df[display_cols],
         use_container_width=True,
         height=min(len(results) * 40 + 40, 600),
         hide_index=True,
