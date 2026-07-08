@@ -135,6 +135,27 @@ def _weighted_category(categories):
     return random.choices(categories, weights=weights, k=1)[0]
 
 
+# 拼接多个底稿仍不足以在小字数（如100字）下产生100条不重复文本，
+# 因此额外提供了带编号/场景标记的前缀，用于制造真实存在差异的变体，
+# 而不是简单复制粘贴同一段素材。标记本身不改变文本所属的类别语义。
+VARIANT_MARKERS = {
+    "zh-CN": [
+        "场景A：", "场景B：", "场景C：", "场景D：", "场景E：", "场景F：", "场景G：", "场景H：",
+        "回归用例一：", "回归用例二：", "灰度环境记录：", "线上复现记录：", "验收样例：", "压力样例：",
+    ],
+    "en-GB": [
+        "Scenario A: ", "Scenario B: ", "Scenario C: ", "Scenario D: ", "Scenario E: ", "Scenario F: ",
+        "Regression case one: ", "Regression case two: ", "Staging note: ", "Production sample: ", "Acceptance sample: ",
+    ],
+    "ja-JP": [
+        "ケースA：", "ケースB：", "ケースC：", "ケースD：", "ケースE：", "回帰テスト一：", "検収サンプル：", "本番想定：",
+    ],
+    "ko-KR": [
+        "시나리오 A: ", "시나리오 B: ", "시나리오 C: ", "시나리오 D: ", "회귀 사례 1: ", "검수 샘플: ", "운영 환경 예시: ",
+    ],
+}
+
+
 def _natural_trim(text, target_length):
     text = text.strip()
     if _text_length(text) <= target_length:
@@ -159,18 +180,13 @@ def _natural_trim(text, target_length):
     return candidate.rstrip("，,；;、 ") + "。"
 
 
-def _extend_copy(copy, pool, target_length):
-    if _text_length(copy) >= target_length:
-        return copy
-
-    parts = [copy]
-    candidates = [item for item in pool if item != copy]
+def _extend_copy(order, target_length):
+    """按给定顺序拼接底稿，直到达到目标字数（不足时循环复用顺序列表）。"""
+    parts = []
+    idx = 0
     while _text_length(" ".join(parts)) < target_length:
-        if not candidates:
-            candidates = pool[:]
-            random.shuffle(candidates)
-        next_part = candidates.pop(0)
-        parts.append(next_part)
+        parts.append(order[idx % len(order)])
+        idx += 1
     return " ".join(parts)
 
 
@@ -183,21 +199,54 @@ def _select_length_category(lang_code, category):
     return _weighted_category(available)
 
 
+def _apply_variant(text, lang_code, variant_index):
+    """在文本前加入编号/场景标记，在不破坏类别语义的前提下制造可辨识差异。"""
+    markers = VARIANT_MARKERS.get(lang_code, [])
+    if not markers:
+        return text
+    marker = markers[variant_index % len(markers)]
+    return marker + text
+
+
+def _build_unique_text(pool, lang_code, target_length, seen_texts, variant_index):
+    """从底稿池中拼出一条尚未出现过的文本；拼接顺序、变体标记和截断位置共同保证多样性。"""
+    max_attempts = 30
+    candidate = ""
+    for _ in range(max_attempts):
+        order = pool[:]
+        random.shuffle(order)
+        combined = _extend_copy(order, target_length)
+        candidate = _natural_trim(combined, target_length)
+        text = _apply_variant(candidate, lang_code, variant_index)
+        if text not in seen_texts:
+            return text
+        variant_index += 1
+
+    # 极端情况下（底稿池过小、目标字数过短、变体标记也用尽）仍未找到新组合，
+    # 追加序号后缀兜底，确保绝不会返回完全相同的文本。
+    fallback_index = variant_index
+    while True:
+        text = f"{candidate} #{fallback_index}"
+        if text not in seen_texts:
+            return text
+        fallback_index += 1
+
+
 def generate_by_length(lang_code, target_length, category="全部", count=1):
     mod = ALL_LANGUAGES.get(lang_code)
     if mod is None or lang_code not in LONG_COPY_LANGUAGES:
         return []
 
     results = []
+    seen_texts = set()
     for idx in range(1, int(count) + 1):
         selected_category = _select_length_category(lang_code, category)
         if selected_category is None:
             return []
 
         pool = LONG_COPY[lang_code][selected_category]
-        copy = random.choice(pool)
-        copy = _extend_copy(copy, pool, target_length)
-        text = _natural_trim(copy, target_length)
+        text = _build_unique_text(pool, lang_code, target_length, seen_texts, idx - 1)
+        seen_texts.add(text)
 
         results.append({
             "序号": idx,
