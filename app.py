@@ -1,6 +1,13 @@
 import streamlit as st
 import pandas as pd
-from generator import generate, generate_by_length, ALL_CATEGORIES, LENGTH_OPTIONS
+from generator import (
+    generate,
+    generate_by_length,
+    ALL_CATEGORIES,
+    LENGTH_OPTIONS,
+    LENGTH_CATEGORIES,
+    LONG_COPY_LANGUAGES,
+)
 from exporter import to_excel_bytes, to_csv_bytes, make_filename
 from templates import get_language_options
 
@@ -34,24 +41,32 @@ gen_mode = st.radio(
 
 col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
 
-with col1:
-    selected_lang = st.selectbox(
-        "选择语种",
-        options=list(lang_display.keys()),
-        format_func=lambda x: lang_display[x],
-    )
-
 count = 20
 target_length = LENGTH_OPTIONS[1]
 length_count = 1
 
 if gen_mode == "按数量生成":
+    with col1:
+        selected_lang = st.selectbox(
+            "选择语种",
+            options=list(lang_display.keys()),
+            format_func=lambda x: lang_display[x],
+        )
     with col2:
         count = st.number_input("生成数量", min_value=1, max_value=500, value=20, step=5)
     with col3:
         category_options = ["全部"] + ALL_CATEGORIES
         selected_category = st.selectbox("用例类别", options=category_options)
 else:
+    with col1:
+        length_lang_display = {
+            code: name for code, name in lang_display.items() if code in LONG_COPY_LANGUAGES
+        }
+        selected_lang = st.selectbox(
+            "选择语种（按字数生成目前仅支持中/英/日/韩）",
+            options=list(length_lang_display.keys()),
+            format_func=lambda x: length_lang_display[x],
+        )
     with col2:
         target_length = st.selectbox(
             "目标字数",
@@ -62,7 +77,7 @@ else:
     with col3:
         length_count = st.number_input("生成数量", min_value=1, max_value=100, value=1, step=1)
     with col4:
-        category_options = ["全部"] + ALL_CATEGORIES
+        category_options = ["全部"] + LENGTH_CATEGORIES
         selected_category = st.selectbox("用例类别", options=category_options)
 
 generate_btn = st.button("🚀 生成用例", type="primary", use_container_width=True)
@@ -87,9 +102,8 @@ if "results" in st.session_state and st.session_state["results"]:
     st.success(f"✅ 已生成 **{len(results)}** 条 **{lang_name}** 测试用例")
 
     df = pd.DataFrame(results)
-    display_cols = [c for c in ["序号", "类别", "目标字数", "实际字数", "测试用例"] if c in df.columns]
     st.dataframe(
-        df[display_cols],
+        df[["序号", "类别", "测试用例"]],
         use_container_width=True,
         height=min(len(results) * 40 + 40, 600),
         hide_index=True,
