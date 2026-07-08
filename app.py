@@ -41,6 +41,10 @@ with col1:
         format_func=lambda x: lang_display[x],
     )
 
+count = 20
+target_length = LENGTH_OPTIONS[1]
+length_count = 1
+
 if gen_mode == "按数量生成":
     with col2:
         count = st.number_input("生成数量", min_value=1, max_value=500, value=20, step=5)
@@ -68,7 +72,7 @@ if generate_btn:
         if gen_mode == "按数量生成":
             results = generate(selected_lang, count, selected_category)
         else:
-            results = generate_by_length(selected_lang, target_length, selected_category, length_count)
+            results = generate_by_length(selected_lang, target_length, selected_category, int(length_count))
 
     if not results:
         st.warning("未找到该语种的模板数据，请检查配置。")
